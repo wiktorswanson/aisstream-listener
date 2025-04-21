@@ -35,7 +35,7 @@
   </style>
 </head>
 <body>
-  <header>Hello World</header>
+  <header>Hello World<div id="status" style="margin-top: 5px; font-size: 16px;">Status: <span id="api-status" style="color: orange;">Connecting...</span></div></header>
   <div id="controls">
     <label for="layer-select">Map Style:</label>
     <select id="layer-select">
@@ -69,6 +69,17 @@
 
     const markers = {};
     const socket = new WebSocket("wss://ais-stream-backend.onrender.com/ws");
+    const statusEl = document.getElementById("api-status");
+    socket.onopen = () => statusEl.textContent = "Connected";
+    socket.onopen = () => statusEl.style.color = "green";
+    socket.onclose = () => {
+      statusEl.textContent = "Disconnected";
+      statusEl.style.color = "red";
+    };
+    socket.onerror = () => {
+      statusEl.textContent = "Error";
+      statusEl.style.color = "red";
+    };
 
     socket.onmessage = function(event) {
       const data = JSON.parse(event.data);
