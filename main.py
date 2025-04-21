@@ -1,31 +1,46 @@
 import asyncio
-import websockets
 import json
+from fastapi import FastAPI, WebSocket
+from fastapi.responses import HTMLResponse
+import websockets
+import uvicorn
 
-API_KEY = "940bf3259b0a8f7c3e1e4fb317b37bba918072fa"
+app = FastAPI()
 
-async def connect_to_aisstream():
+clients = set()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    clients.add(websocket)
+    try:
+        while True:
+            await asyncio.sleep(1)
+    except Exception:
+        clients.remove(websocket)
+
+async def stream_ais_data():
     url = "wss://stream.aisstream.io/v0/stream"
+    API_KEY = "940bf3259b0a8f7c3e1e4fb317b37bba918072fa"
 
     async with websockets.connect(url) as websocket:
         auth_msg = {
             "APIKey": API_KEY,
             "BoundingBoxes": [
-                {
-                    "MinLat": 55.0,
-                    "MinLon": 12.0,
-                    "MaxLat": 60.0,
-                    "MaxLon": 18.0
-                }
+                {"MinLat": 55.0, "MinLon": 12.0, "MaxLat": 60.0, "MaxLon": 18.0}
             ]
         }
-
         await websocket.send(json.dumps(auth_msg))
-        print("Connected and authenticated. Listening for messages...")
 
         while True:
-            message = await websocket.recv()
-            data = json.loads(message)
-            print(json.dumps(data, indent=2))
+            msg = await websocket.recv()
+            for client in clients:
+                try:
+                    await client.send_text(msg)
+                except:
+                    clients.remove(client)
 
-asyncio.run(connect_to_aisstream())
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(stream_ais_data())
+
