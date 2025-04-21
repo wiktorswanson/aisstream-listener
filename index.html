@@ -102,7 +102,11 @@
     Object.entries(shipList).forEach(([mmsi, ship]) => {
       if (!markers[mmsi]) {
         markers[mmsi] = L.marker([ship.lat, ship.lon], { icon: shipIcon }).addTo(map)
-          .bindPopup(`<b>${ship.name}</b><br>MMSI: ${mmsi}<br>Lat: ${ship.lat.toFixed(4)}<br>Lon: ${ship.lon.toFixed(4)}`);
+          .bindPopup(`<b>${ship.name}</b><br>
+      MMSI: ${mmsi}<br>
+      Lat: ${ship.lat.toFixed(4)}<br>
+      Lon: ${ship.lon.toFixed(4)}<br>
+      (cached position)`);
       }
     });
 
@@ -123,7 +127,14 @@
 
       if (!markers[mmsi]) {
         markers[mmsi] = L.marker([lat, lon], { icon: shipIcon }).addTo(map)
-          .bindPopup(`<b>${name}</b><br>MMSI: ${mmsi}<br>Lat: ${lat.toFixed(4)}<br>Lon: ${lon.toFixed(4)}`);
+          .bindPopup(`<b>${name}</b><br>
+      MMSI: ${mmsi}<br>
+      Lat: ${lat.toFixed(4)}<br>
+      Lon: ${lon.toFixed(4)}<br>
+      Speed: ${meta.SOG || 'N/A'} kn<br>
+      Heading: ${meta.TrueHeading || 'N/A'}°<br>
+      Course: ${meta.COG || 'N/A'}°<br>
+      Last update: ${new Date(meta.Timestamp || Date.now()).toLocaleString()}`);
       } else {
         markers[mmsi].setLatLng([lat, lon]);
       }
