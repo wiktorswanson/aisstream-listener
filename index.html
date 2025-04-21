@@ -2,87 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live AIS Map – Collapsible Sidebar</title>
+  <title>Live AIS Map – Icons + Local Storage</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
     #map { height: 100%; }
     #sidebar {
-      width: 300px;
-      height: 100%;
-      position: fixed;
-      left: 0;
-      top: 0;
-      background: #f8f9fa;
-      border-right: 1px solid #ccc;
-      overflow-y: auto;
-      z-index: 1002;
+      width: 300px; height: 100%;
+      position: fixed; left: 0; top: 0;
+      background: #f8f9fa; border-right: 1px solid #ccc;
+      overflow-y: auto; z-index: 1002;
       transition: left 0.3s;
     }
-    #sidebar.collapsed {
-      left: -300px;
-    }
+    #sidebar.collapsed { left: -300px; }
     #toggle-btn {
-      position: fixed;
-      left: 300px;
-      top: 10px;
-      z-index: 1003;
-      padding: 4px 10px;
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      border-radius: 0 4px 4px 0;
-      font-size: 14px;
-      transition: left 0.3s;
+      position: fixed; left: 300px; top: 10px;
+      z-index: 1003; padding: 4px 10px;
+      background: #007bff; color: white;
+      cursor: pointer; border-radius: 0 4px 4px 0;
+      font-size: 14px; transition: left 0.3s;
     }
-    #toggle-btn.collapsed {
-      left: 0;
-      border-radius: 0 4px 4px 0;
-    }
-    #tabs {
-      display: flex;
-      justify-content: space-around;
-      background: #e9ecef;
-    }
-    .tab {
-      flex: 1;
-      padding: 10px;
-      text-align: center;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-    }
-    .tab.active {
-      border-bottom: 2px solid #007bff;
-      font-weight: bold;
-    }
-    .tab-content {
-      display: none;
-      padding: 10px;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    .ship-list-item {
-      padding: 6px;
-      border-bottom: 1px solid #ddd;
-      cursor: pointer;
-    }
-    .ship-list-item:hover {
-      background-color: #e6f0ff;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 6px;
-      margin: 6px 0;
-      box-sizing: border-box;
-    }
-    button {
-      width: 100%;
-      margin-top: 6px;
-      padding: 6px;
-      cursor: pointer;
-    }
+    #toggle-btn.collapsed { left: 0; }
+    #tabs { display: flex; justify-content: space-around; background: #e9ecef; }
+    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab.active { border-bottom: 2px solid #007bff; font-weight: bold; }
+    .tab-content { display: none; padding: 10px; }
+    .tab-content.active { display: block; }
+    .ship-list-item { padding: 6px; border-bottom: 1px solid #ddd; cursor: pointer; }
+    .ship-list-item:hover { background-color: #e6f0ff; }
+    input[type="text"] { width: 100%; padding: 6px; margin: 6px 0; box-sizing: border-box; }
+    button { width: 100%; margin-top: 6px; padding: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -107,6 +57,13 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
+    const shipIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/190/190600.png',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12]
+    });
+
     const map = L.map('map').setView([57.5, 15.0], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
@@ -114,7 +71,6 @@
 
     const sidebar = document.getElementById("sidebar");
     const toggleBtn = document.getElementById("toggle-btn");
-
     function toggleSidebar() {
       sidebar.classList.toggle("collapsed");
       toggleBtn.classList.toggle("collapsed");
@@ -122,7 +78,7 @@
     }
 
     const markers = {};
-    const shipList = {
+    let shipList = {
       "219032609": { name: "Runner", lat: 57.5, lon: 15.0 },
       "219027298": { name: "Master", lat: 57.3, lon: 14.8 },
       "257026000": { name: "Island Ocean", lat: 57.2, lon: 15.2 },
@@ -133,8 +89,26 @@
     };
 
     const shipListEl = document.getElementById("ship-list");
-    const socket = new WebSocket("wss://aisstream-listener-qfgo.onrender.com/ws");
 
+    // Load saved data
+    const saved = localStorage.getItem("ships");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        shipList = { ...shipList, ...parsed };
+      } catch (e) { console.warn("Could not parse saved ship data."); }
+    }
+
+    Object.entries(shipList).forEach(([mmsi, ship]) => {
+      if (!markers[mmsi]) {
+        markers[mmsi] = L.marker([ship.lat, ship.lon], { icon: shipIcon }).addTo(map)
+          .bindPopup(`<b>${ship.name}</b><br>MMSI: ${mmsi}`);
+      }
+    });
+
+    renderShipList();
+
+    const socket = new WebSocket("wss://aisstream-listener-qfgo.onrender.com/ws");
     socket.onmessage = function(event) {
       const data = JSON.parse(event.data);
       if (data.MessageType !== "PositionReport") return;
@@ -148,13 +122,14 @@
       if (!lat || !lon) return;
 
       if (!markers[mmsi]) {
-        markers[mmsi] = L.marker([lat, lon]).addTo(map)
+        markers[mmsi] = L.marker([lat, lon], { icon: shipIcon }).addTo(map)
           .bindPopup(`<b>${name}</b><br>MMSI: ${mmsi}`);
       } else {
         markers[mmsi].setLatLng([lat, lon]);
       }
 
       shipList[mmsi] = { name, lat, lon };
+      localStorage.setItem("ships", JSON.stringify(shipList));
       renderShipList();
     };
 
@@ -192,14 +167,6 @@
         window.open(url, '_blank');
       }
     }
-
-    Object.entries(shipList).forEach(([mmsi, ship]) => {
-      if (!markers[mmsi]) {
-        markers[mmsi] = L.marker([ship.lat, ship.lon]).addTo(map)
-          .bindPopup(`<b>${ship.name}</b><br>MMSI: ${mmsi}`);
-      }
-    });
-    renderShipList();
   </script>
 </body>
 </html>
