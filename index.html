@@ -104,8 +104,8 @@
         markers[mmsi] = L.marker([ship.lat, ship.lon], { icon: shipIcon }).addTo(map)
           .bindPopup(`<b>${ship.name}</b><br>
       MMSI: ${mmsi}<br>
-      Lat: ${ship.lat.toFixed(4)}<br>
       Lon: ${ship.lon.toFixed(4)}<br>
+      Lat: ${ship.lat.toFixed(4)}<br>
       (cached position)`);
       }
     });
@@ -129,8 +129,8 @@
         markers[mmsi] = L.marker([lat, lon], { icon: shipIcon }).addTo(map)
           .bindPopup(`<b>${name}</b><br>
       MMSI: ${mmsi}<br>
-      Lat: ${lat.toFixed(4)}<br>
       Lon: ${lon.toFixed(4)}<br>
+      Lat: ${lat.toFixed(4)}<br>
       Speed: ${meta.SOG || 'N/A'} kn<br>
       Heading: ${meta.TrueHeading || 'N/A'}°<br>
       Course: ${meta.COG || 'N/A'}°<br>
