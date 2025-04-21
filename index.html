@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Hello Worlden</title>
+  <title>Hello World</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
@@ -19,23 +19,37 @@
       text-align: center;
       font-size: 24px;
     }
-    #controls {
+    #controls, #connection {
       position: absolute;
-      top: 60px;
-      left: 10px;
       z-index: 1000;
       background: white;
       padding: 8px;
       border-radius: 5px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
+    #controls {
+      top: 60px;
+      left: 10px;
+    }
+    #connection {
+      top: 60px;
+      right: 10px;
+      max-width: 300px;
+    }
     #map {
       height: calc(100% - 50px);
+    }
+    #status {
+      font-size: 16px;
+      margin-top: 5px;
     }
   </style>
 </head>
 <body>
-  <header>Hello Worlden<div id="status" style="margin-top: 5px; font-size: 16px;">Status: <span id="api-status" style="color: orange;">Connecting...</span></div></header>
+  <header>Hello World
+    <div id="status">Status: <span id="api-status" style="color: orange;">Disconnected</span></div>
+  </header>
+
   <div id="controls">
     <label for="layer-select">Map Style:</label>
     <select id="layer-select">
@@ -44,7 +58,21 @@
       <option value="dark">Dark</option>
     </select>
   </div>
+
+  <div id="connection">
+    <div>
+      <label for="backend-url">Backend WebSocket URL:</label><br />
+      <input type="text" id="backend-url" placeholder="wss://your-backend.com/ws" style="width: 100%;" />
+    </div>
+    <div style="margin-top: 5px;">
+      <label for="api-key">AIS API Key:</label><br />
+      <input type="text" id="api-key" placeholder="Your AISstream API Key" style="width: 100%;" />
+    </div>
+    <button onclick="connectToBackend()" style="margin-top: 5px; width: 100%;">Connect</button>
+  </div>
+
   <div id="map"></div>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([57.5, 15.0], 6);
@@ -60,7 +88,6 @@
       })
     };
     baseLayers.osm.addTo(map);
-
     document.getElementById('layer-select').addEventListener('change', function (e) {
       const selected = e.target.value;
       Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
@@ -68,34 +95,57 @@
     });
 
     const markers = {};
-    const socket = new WebSocket("wss://ais-stream-backend.onrender.com/ws");
-    const statusEl = document.getElementById("api-status");
-    socket.onopen = () => statusEl.textContent = "Connected";
-    socket.onopen = () => statusEl.style.color = "green";
-    socket.onclose = () => {
-      statusEl.textContent = "Disconnected";
-      statusEl.style.color = "red";
-    };
-    socket.onerror = () => {
-      statusEl.textContent = "Error";
-      statusEl.style.color = "red";
-    };
+    let socket;
 
-    socket.onmessage = function(event) {
-      const data = JSON.parse(event.data);
-      if (data && data.MetaData && data.MetaData.MessageType === "PositionReport") {
-        const mmsi = data.MetaData.MMSI;
-        const lat = data.Position.Lat;
-        const lon = data.Position.Lon;
-        if (!lat || !lon) return;
+    function connectToBackend() {
+      const backendUrl = document.getElementById("backend-url").value;
+      const apiKey = document.getElementById("api-key").value;
+      const statusEl = document.getElementById("api-status");
 
-        if (!markers[mmsi]) {
-          markers[mmsi] = L.marker([lat, lon]).addTo(map);
-        } else {
-          markers[mmsi].setLatLng([lat, lon]);
-        }
+      if (!backendUrl || !apiKey) {
+        alert("Please enter both backend URL and API key.");
+        return;
       }
-    };
+
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+
+      socket = new WebSocket(backendUrl);
+
+      socket.onopen = () => {
+        statusEl.textContent = "Connected";
+        statusEl.style.color = "green";
+        // Send API key to backend if needed
+        socket.send(JSON.stringify({ APIKey: apiKey }));
+      };
+
+      socket.onclose = () => {
+        statusEl.textContent = "Disconnected";
+        statusEl.style.color = "red";
+      };
+
+      socket.onerror = () => {
+        statusEl.textContent = "Error";
+        statusEl.style.color = "red";
+      };
+
+      socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data && data.MetaData && data.MetaData.MessageType === "PositionReport") {
+          const mmsi = data.MetaData.MMSI;
+          const lat = data.Position.Lat;
+          const lon = data.Position.Lon;
+          if (!lat || !lon) return;
+
+          if (!markers[mmsi]) {
+            markers[mmsi] = L.marker([lat, lon]).addTo(map);
+          } else {
+            markers[mmsi].setLatLng([lat, lon]);
+          }
+        }
+      };
+    }
   </script>
 </body>
 </html>
