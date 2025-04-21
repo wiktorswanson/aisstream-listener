@@ -2,92 +2,65 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Hello World</title>
+  <title>Live Ship Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
-    header { padding: 10px; background: #333; color: white; text-align: center; font-size: 24px; }
-    #controls, #connection { position: absolute; z-index: 1000; background: white; padding: 8px;
-      border-radius: 5px; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
-    #controls { top: 60px; left: 10px; }
-    #connection { top: 60px; right: 10px; max-width: 320px; font-size: 14px; }
-    #map { height: calc(100% - 50px); }
-    #status { font-size: 16px; margin-top: 5px; }
-    code { display: inline-block; margin: 4px 0; background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+    header { padding: 10px; background: #333; color: white; text-align: center; font-size: 22px; }
+    #map { height: calc(100% - 60px); }
+    #status { padding: 10px; background: #f5f5f5; font-size: 14px; text-align: center; }
   </style>
 </head>
 <body>
-  <header>Hello World
-    <div id="status">Status: <span id="api-status" style="color: orange;">Disconnected</span></div>
-  </header>
-  <div id="controls">
-    <label for="layer-select">Map Style:</label>
-    <select id="layer-select">
-      <option value="osm">OpenStreetMap</option>
-      <option value="satellite">Satellite</option>
-      <option value="dark">Dark</option>
-    </select>
-  </div>
-  <div id="connection">
-    <strong>Using Backend WebSocket:</strong><br />
-    <code>https://aisstream-listener-qfgo.onrender.com</code><br />
-    <strong>AISstream API Key:</strong><br />
-    <code>940bf325...72fa</code>
-  </div>
+  <header>Live AIS Map – Tracking Selected Ships</header>
+  <div id="status">Connecting to backend...</div>
   <div id="map"></div>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([57.5, 15.0], 6);
-    const baseLayers = {
-      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }),
-      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri & contributors'
-      }),
-      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CartoDB'
-      })
-    };
-    baseLayers.osm.addTo(map);
-    document.getElementById('layer-select').addEventListener('change', function (e) {
-      const selected = e.target.value;
-      Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
-      baseLayers[selected].addTo(map);
-    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-    const statusEl = document.getElementById("api-status");
+    const statusEl = document.getElementById("status");
     const markers = {};
-    const socket = new WebSocket("https://aisstream-listener-qfgo.onrender.com");
+    const MMSI_LIST = ["219027026", "219027298", "219032609"];
+    const socket = new WebSocket("wss://aisstream-listener-qfgo.onrender.com/ws");
 
     socket.onopen = () => {
-      statusEl.textContent = "Connected";
-      statusEl.style.color = "green";
-    };
-
-    socket.onclose = () => {
-      statusEl.textContent = "Disconnected";
-      statusEl.style.color = "red";
+      statusEl.textContent = "Connected to backend.";
     };
 
     socket.onerror = () => {
-      statusEl.textContent = "Error";
+      statusEl.textContent = "WebSocket error.";
+      statusEl.style.color = "red";
+    };
+
+    socket.onclose = () => {
+      statusEl.textContent = "Connection closed.";
       statusEl.style.color = "red";
     };
 
     socket.onmessage = function(event) {
       const data = JSON.parse(event.data);
-      if (data && data.MetaData && data.MessageType === "PositionReport") {
-        const mmsi = data.MetaData.MMSI;
-        const lat = data.MetaData.latitude;
-        const lon = data.MetaData.longitude;
-        if (!lat || !lon) return;
-        if (!markers[mmsi]) {
-          markers[mmsi] = L.marker([lat, lon]).addTo(map);
-        } else {
-          markers[mmsi].setLatLng([lat, lon]);
-        }
+      if (data.MessageType !== "PositionReport") return;
+      const meta = data.MetaData;
+      if (!MMSI_LIST.includes(meta.MMSI.toString())) return;
+
+      const lat = meta.latitude;
+      const lon = meta.longitude;
+      const mmsi = meta.MMSI;
+      const name = meta.ShipName || "Unknown Ship";
+
+      if (!lat || !lon) return;
+
+      if (!markers[mmsi]) {
+        markers[mmsi] = L.marker([lat, lon]).addTo(map)
+          .bindPopup(`<b>${name}</b><br>MMSI: ${mmsi}`);
+      } else {
+        markers[mmsi].setLatLng([lat, lon]);
       }
     };
   </script>
