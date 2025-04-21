@@ -13,7 +13,7 @@
   </style>
 </head>
 <body>
-  <header>Live AIS Map – Tracking Selected Ships</header>
+  <header>Live AIS Map – Showing All Ships</header>
   <div id="status">Connecting to backend...</div>
   <div id="map"></div>
 
@@ -26,7 +26,6 @@
 
     const statusEl = document.getElementById("status");
     const markers = {};
-    const MMSI_LIST = ["219027026", "219027298", "219032609"];
     const socket = new WebSocket("wss://aisstream-listener-qfgo.onrender.com/ws");
 
     socket.onopen = () => {
@@ -46,12 +45,10 @@
     socket.onmessage = function(event) {
       const data = JSON.parse(event.data);
       if (data.MessageType !== "PositionReport") return;
-      const meta = data.MetaData;
-      //Show all vessels for testing
-//    // if (!MMSI_LIST.includes(meta.MMSI.toString())) return;
 
-      const lat = meta.latitude;
-      const lon = meta.longitude;
+      const meta = data.MetaData;
+      const lat = data.Position?.Lat || meta.latitude;
+      const lon = data.Position?.Lon || meta.longitude;
       const mmsi = meta.MMSI;
       const name = meta.ShipName || "Unknown Ship";
 
