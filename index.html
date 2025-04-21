@@ -102,7 +102,7 @@
     Object.entries(shipList).forEach(([mmsi, ship]) => {
       if (!markers[mmsi]) {
         markers[mmsi] = L.marker([ship.lat, ship.lon], { icon: shipIcon }).addTo(map)
-          .bindPopup(`<b>${ship.name}</b><br>MMSI: ${mmsi}`);
+          .bindPopup(`<b>${ship.name}</b><br>MMSI: ${mmsi}<br>Lat: ${ship.lat.toFixed(4)}<br>Lon: ${ship.lon.toFixed(4)}`);
       }
     });
 
@@ -123,7 +123,7 @@
 
       if (!markers[mmsi]) {
         markers[mmsi] = L.marker([lat, lon], { icon: shipIcon }).addTo(map)
-          .bindPopup(`<b>${name}</b><br>MMSI: ${mmsi}`);
+          .bindPopup(`<b>${name}</b><br>MMSI: ${mmsi}<br>Lat: ${lat.toFixed(4)}<br>Lon: ${lon.toFixed(4)}`);
       } else {
         markers[mmsi].setLatLng([lat, lon]);
       }
