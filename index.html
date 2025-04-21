@@ -31,7 +31,7 @@
   </div>
   <div id="connection">
     <strong>Using Backend WebSocket:</strong><br />
-    <code>wss://aisstream-listener.onrender.com/ws</code><br />
+    <code>wss://aisstream-listener-qfgo.onrender.com</code><br />
     <strong>AISstream API Key:</strong><br />
     <code>940bf325...72fa</code>
   </div>
@@ -59,7 +59,7 @@
 
     const statusEl = document.getElementById("api-status");
     const markers = {};
-    const socket = new WebSocket("wss://aisstream-listener.onrender.com/ws");
+    const socket = new WebSocket("wss://aisstream-listener-qfgo.onrender.com");
 
     socket.onopen = () => {
       statusEl.textContent = "Connected";
