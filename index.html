@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Ship Tracker</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([57.5, 15.0], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markers = {};
+
+    const socket = new WebSocket("wss://YOUR_RENDER_URL/ws");
+
+    socket.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data && data.MetaData && data.MetaData.MessageType === "PositionReport") {
+        const mmsi = data.MetaData.MMSI;
+        const lat = data.Position.Lat;
+        const lon = data.Position.Lon;
+
+        if (!markers[mmsi]) {
+          markers[mmsi] = L.marker([lat, lon]).addTo(map);
+        } else {
+          markers[mmsi].setLatLng([lat, lon]);
+        }
+      }
+    };
+  </script>
+</body>
+</html>
