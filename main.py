@@ -5,6 +5,10 @@ import websockets
 
 app = FastAPI()
 clients = set()
+@app.get("/")
+def root():
+    return {"message": "AISstream backend is running. Use /ws for WebSocket."}
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
