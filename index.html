@@ -34,7 +34,8 @@
     #connection {
       top: 60px;
       right: 10px;
-      max-width: 300px;
+      max-width: 320px;
+      font-size: 14px;
     }
     #map {
       height: calc(100% - 50px);
@@ -42,6 +43,13 @@
     #status {
       font-size: 16px;
       margin-top: 5px;
+    }
+    code {
+      display: inline-block;
+      margin: 4px 0;
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -60,15 +68,10 @@
   </div>
 
   <div id="connection">
-    <div>
-      <label for="backend-url">Backend WebSocket URL:</label><br />
-      <input type="text" id="backend-url" placeholder="wss://your-backend.com/ws" style="width: 100%;" />
-    </div>
-    <div style="margin-top: 5px;">
-      <label for="api-key">AIS API Key:</label><br />
-      <input type="text" id="api-key" placeholder="Your AISstream API Key" style="width: 100%;" />
-    </div>
-    <button onclick="connectToBackend()" style="margin-top: 5px; width: 100%;">Connect</button>
+    <strong>Using Backend WebSocket:</strong><br />
+    <code id="backend-url-display">wss://ais-stream-backend.onrender.com/ws</code><br />
+    <strong>AISstream API Key:</strong><br />
+    <code id="api-key-display">940bf325...72fa</code>
   </div>
 
   <div id="map"></div>
@@ -88,64 +91,51 @@
       })
     };
     baseLayers.osm.addTo(map);
+
     document.getElementById('layer-select').addEventListener('change', function (e) {
       const selected = e.target.value;
       Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
       baseLayers[selected].addTo(map);
     });
 
+    const backendUrl = "wss://ais-stream-backend.onrender.com/ws";
+    const apiKey = "940bf3259b0a8f7c3e1e4fb317b37bba918072fa";
+
+    const statusEl = document.getElementById("api-status");
     const markers = {};
-    let socket;
+    const socket = new WebSocket(backendUrl);
 
-    function connectToBackend() {
-      const backendUrl = document.getElementById("backend-url").value;
-      const apiKey = document.getElementById("api-key").value;
-      const statusEl = document.getElementById("api-status");
+    socket.onopen = () => {
+      statusEl.textContent = "Connected";
+      statusEl.style.color = "green";
+      socket.send(JSON.stringify({ APIKey: apiKey }));
+    };
 
-      if (!backendUrl || !apiKey) {
-        alert("Please enter both backend URL and API key.");
-        return;
-      }
+    socket.onclose = () => {
+      statusEl.textContent = "Disconnected";
+      statusEl.style.color = "red";
+    };
 
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
+    socket.onerror = () => {
+      statusEl.textContent = "Error";
+      statusEl.style.color = "red";
+    };
 
-      socket = new WebSocket(backendUrl);
+    socket.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data && data.MetaData && data.MetaData.MessageType === "PositionReport") {
+        const mmsi = data.MetaData.MMSI;
+        const lat = data.Position.Lat;
+        const lon = data.Position.Lon;
+        if (!lat || !lon) return;
 
-      socket.onopen = () => {
-        statusEl.textContent = "Connected";
-        statusEl.style.color = "green";
-        // Send API key to backend if needed
-        socket.send(JSON.stringify({ APIKey: apiKey }));
-      };
-
-      socket.onclose = () => {
-        statusEl.textContent = "Disconnected";
-        statusEl.style.color = "red";
-      };
-
-      socket.onerror = () => {
-        statusEl.textContent = "Error";
-        statusEl.style.color = "red";
-      };
-
-      socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data && data.MetaData && data.MetaData.MessageType === "PositionReport") {
-          const mmsi = data.MetaData.MMSI;
-          const lat = data.Position.Lat;
-          const lon = data.Position.Lon;
-          if (!lat || !lon) return;
-
-          if (!markers[mmsi]) {
-            markers[mmsi] = L.marker([lat, lon]).addTo(map);
-          } else {
-            markers[mmsi].setLatLng([lat, lon]);
-          }
+        if (!markers[mmsi]) {
+          markers[mmsi] = L.marker([lat, lon]).addTo(map);
+        } else {
+          markers[mmsi].setLatLng([lat, lon]);
         }
-      };
-    }
+      }
+    };
   </script>
 </body>
 </html>
