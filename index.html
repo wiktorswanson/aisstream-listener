@@ -55,7 +55,38 @@
   <div id="toggle-btn" onclick="toggleSidebar()">⏴</div>
   <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js">
+// Custom icon for your own vessel
+const ownVesselIcon = L.icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+  popupAnchor: [0, -12]
+});
+
+let ownMarker;
+
+function updateOwnVessel(lat, lon, timestamp) {
+  if (!ownMarker) {
+    ownMarker = L.marker([lat, lon], { icon: ownVesselIcon }).addTo(map)
+      .bindPopup(`📍 Your Vessel<br>Lon: ${lon.toFixed(4)}<br>Lat: ${lat.toFixed(4)}<br>Last Update: ${new Date(timestamp).toLocaleTimeString()}`);
+  } else {
+    ownMarker.setLatLng([lat, lon]);
+    ownMarker.setPopupContent(`📍 Your Vessel<br>Lon: ${lon.toFixed(4)}<br>Lat: ${lat.toFixed(4)}<br>Last Update: ${new Date(timestamp).toLocaleTimeString()}`);
+  }
+}
+
+// Intercept GPS MessageType from backend
+const originalSocketHandler = socket.onmessage;
+socket.onmessage = function(event) {
+  const data = JSON.parse(event.data);
+  if (data.MessageType === "GPS") {
+    updateOwnVessel(data.Lat, data.Lon, data.Timestamp);
+  } else {
+    originalSocketHandler(event);
+  }
+}
+</script>
   <script>
     const shipIcon = L.icon({
       iconUrl: 'https://cdn-icons-png.flaticon.com/512/190/190600.png',
@@ -178,6 +209,37 @@
         window.open(url, '_blank');
       }
     }
-  </script>
+  
+// Custom icon for your own vessel
+const ownVesselIcon = L.icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+  popupAnchor: [0, -12]
+});
+
+let ownMarker;
+
+function updateOwnVessel(lat, lon, timestamp) {
+  if (!ownMarker) {
+    ownMarker = L.marker([lat, lon], { icon: ownVesselIcon }).addTo(map)
+      .bindPopup(`📍 Your Vessel<br>Lon: ${lon.toFixed(4)}<br>Lat: ${lat.toFixed(4)}<br>Last Update: ${new Date(timestamp).toLocaleTimeString()}`);
+  } else {
+    ownMarker.setLatLng([lat, lon]);
+    ownMarker.setPopupContent(`📍 Your Vessel<br>Lon: ${lon.toFixed(4)}<br>Lat: ${lat.toFixed(4)}<br>Last Update: ${new Date(timestamp).toLocaleTimeString()}`);
+  }
+}
+
+// Intercept GPS MessageType from backend
+const originalSocketHandler = socket.onmessage;
+socket.onmessage = function(event) {
+  const data = JSON.parse(event.data);
+  if (data.MessageType === "GPS") {
+    updateOwnVessel(data.Lat, data.Lon, data.Timestamp);
+  } else {
+    originalSocketHandler(event);
+  }
+}
+</script>
 </body>
 </html>
