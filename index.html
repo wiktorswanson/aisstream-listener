@@ -55,7 +55,22 @@
   <div id="toggle-btn" onclick="toggleSidebar()">⏴</div>
   <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js">
+function toDMS(deg, isLat) {
+  const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = Math.round(((abs - d - m / 60) * 3600));
+  return `${d}°${m}′${s}″${dir}`;
+}
+
+function copyCoords(lat, lon) {
+  const text = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+  navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+}
+</script>
+
   <script>
     const shipIcon = L.icon({
       iconUrl: 'https://cdn-icons-png.flaticon.com/512/190/190600.png',
@@ -104,8 +119,8 @@
         markers[mmsi] = L.marker([ship.lat, ship.lon], { icon: shipIcon }).addTo(map)
           .bindPopup(`<b>${ship.name}</b><br>
       MMSI: ${mmsi}<br>
-      Lon: ${ship.lon.toFixed(4)}<br>
       Lat: ${ship.lat.toFixed(4)}<br>
+      Lon: ${ship.lon.toFixed(4)}<br>
       (cached position)`);
       }
     });
@@ -131,6 +146,15 @@
       MMSI: ${mmsi}<br>
       Lon: ${lon.toFixed(4)}<br>
       Lat: ${lat.toFixed(4)}<br>
+      DMS: ${toDMS(lat, true)}, ${toDMS(lon, false)}<br>
+      Speed: ${meta.SOG || 'N/A'} kn<br>
+      Heading: ${meta.TrueHeading || 'N/A'}°<br>
+      Course: ${meta.COG || 'N/A'}°<br>
+      Last update: ${new Date(meta.Timestamp || Date.now()).toLocaleString()}<br>
+      <button onclick='copyCoords(${lat}, ${lon})'>📋 Copy Coordinates</button>`);
+      MMSI: ${mmsi}<br>
+      Lat: ${lat.toFixed(4)}<br>
+      Lon: ${lon.toFixed(4)}<br>
       Speed: ${meta.SOG || 'N/A'} kn<br>
       Heading: ${meta.TrueHeading || 'N/A'}°<br>
       Course: ${meta.COG || 'N/A'}°<br>
@@ -178,6 +202,21 @@
         window.open(url, '_blank');
       }
     }
-  </script>
+  
+function toDMS(deg, isLat) {
+  const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = Math.round(((abs - d - m / 60) * 3600));
+  return `${d}°${m}′${s}″${dir}`;
+}
+
+function copyCoords(lat, lon) {
+  const text = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+  navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+}
+</script>
+
 </body>
 </html>
