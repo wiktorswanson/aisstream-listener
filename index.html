@@ -78,7 +78,7 @@
     }
 
     const markers = {};
-    let shipList = {
+    let shipList = {};
       "219032609": { name: "Runner", lat: 57.5, lon: 15.0 },
       "219027298": { name: "Master", lat: 57.3, lon: 14.8 },
       "257026000": { name: "Island Ocean", lat: 57.2, lon: 15.2 },
@@ -90,7 +90,17 @@
 
     const shipListEl = document.getElementById("ship-list");
 
-    // Load saved data
+    const trails = {};
+const trailLayerGroup = L.layerGroup().addTo(map);  // Holds ship trails
+
+function drawTrail(mmsi) {
+  const trail = trails[mmsi];
+  if (trail && trail.length > 1) {
+    L.polyline(trail, { color: 'blue', weight: 2 }).addTo(trailLayerGroup);
+  }
+}
+
+// Load saved data
     const saved = localStorage.getItem("ships");
     if (saved) {
       try {
@@ -110,14 +120,13 @@
 
     const socket = new WebSocket("wss://aisstream-listener-qfgo.onrender.com/ws");
     socket.onmessage = function(event) {
+  trailLayerGroup.clearLayers();
       const data = JSON.parse(event.data);
       if (data.MessageType !== "PositionReport") return;
 
       const meta = data.MetaData;
-     const lat = data.Position?.Lat;
-const lon = data.Position?.Lon;
-if (!lat || !lon) return;
-
+      const lat = data.Position?.Lat;
+      const lon = data.Position?.Lon;
       const mmsi = meta.MMSI;
       const name = meta.ShipName || "Unknown Ship";
 
@@ -130,8 +139,11 @@ if (!lat || !lon) return;
         markers[mmsi].setLatLng([lat, lon]);
       }
 
-      shipList[mmsi] = { name, lat, lon };
-      localStorage.setItem("ships", JSON.stringify(shipList));
+      if (!trails[mmsi]) trails[mmsi] = [];
+trails[mmsi].push([lat, lon]);
+if (trails[mmsi].length > 50) trails[mmsi].shift();  // limit to last 50 positions
+shipList[mmsi] = { name, lat, lon };
+      // localStorage update temporarily disabled
       renderShipList();
     };
 
@@ -152,6 +164,7 @@ if (!lat || !lon) return;
       if (ship) {
         map.setView([ship.lat, ship.lon], 10);
         markers[mmsi]?.openPopup();
+drawTrail(mmsi);
       }
     }
 
