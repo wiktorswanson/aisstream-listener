@@ -114,8 +114,10 @@
       if (data.MessageType !== "PositionReport") return;
 
       const meta = data.MetaData;
-      const lat = data.Position?.Lat || meta.latitude;
-      const lon = data.Position?.Lon || meta.longitude;
+     const lat = data.Position?.Lat;
+const lon = data.Position?.Lon;
+if (!lat || !lon) return;
+
       const mmsi = meta.MMSI;
       const name = meta.ShipName || "Unknown Ship";
 
