@@ -23,8 +23,8 @@ async def connect_to_aisstream():
     async with websockets.connect(AISSTREAM_URL) as ais_ws:
         subscription_message = {
             "APIKey": API_KEY,
-            "BoundingBoxes": [[[55.0, 12.0], [60.0, 18.0]]],  # Adjust to your region
-            "FilterMessageTypes": ["PositionReport"]  # Only PositionReport for now
+            "BoundingBoxes": [[[55.0, 12.0], [60.0, 18.0]]],
+            "FilterMessageTypes": ["PositionReport"]
         }
 
         await ais_ws.send(json.dumps(subscription_message))
